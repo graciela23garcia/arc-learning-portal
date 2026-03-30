@@ -91,15 +91,28 @@
     </div>
   </div>
   <div class="main">
-    <div class="card">
-      <div class="card-header">
-        <h2>Courses</h2>
-        <button class="btn btn-primary btn-sm" id="addCourseBtn">+ New course</button>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="btn btn-primary btn-sm" id="tabCourses" onclick="APP.showTab('courses')">Courses</button>
+      <button class="btn btn-outline btn-sm" id="tabUsers" onclick="APP.showTab('users')">Users</button>
+    </div>
+    <div id="coursesTab">
+      <div class="card">
+        <div class="card-header">
+          <h2>Courses</h2>
+          <button class="btn btn-primary btn-sm" id="addCourseBtn">+ New course</button>
+        </div>
+        <div id="courseList"><div class="empty">Loading courses...</div></div>
       </div>
-      <div id="courseList"><div class="empty">Loading courses...</div></div>
+    </div>
+    <div id="usersTab" class="hidden">
+      <div class="card">
+        <div class="card-header">
+          <h2>Users</h2>
+        </div>
+        <div id="userList"><div class="empty">Loading users...</div></div>
+      </div>
     </div>
   </div>
-</div>
 
 <div id="modalBg" class="modal-bg hidden"></div>
 
@@ -414,15 +427,51 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   function esc(s){if(!s)return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
   // PUBLIC API (for onclick handlers in dynamic HTML)
+  async function loadUsers(){
+    var r=await db.from('profiles').select('id,full_name,role,created_at');
+    var users=r.data||[];
+    if(!users.length){document.getElementById('userList').innerHTML='<div class="empty">No users yet.</div>';return}
+    var html='';
+    users.forEach(function(u){
+      var name=u.full_name||'Unnamed user';
+      var isAdmin=u.role==='admin';
+      html+='<div class="list-item"><div class="list-item-info"><h3>'+esc(name)+'</h3><p>'+u.id+'</p></div>';
+      html+='<div class="btn-group">';
+      html+='<span class="badge '+(isAdmin?'badge-published':'badge-draft')+'">'+u.role+'</span>';
+      if(isAdmin){html+='<button class="btn btn-outline btn-sm" onclick="APP.changeRole(\''+u.id+'\',\'student\')">Make student</button>';}
+      else{html+='<button class="btn btn-primary btn-sm" onclick="APP.changeRole(\''+u.id+'\',\'admin\')">Make admin</button>';}
+      html+='</div></div>';
+    });
+    document.getElementById('userList').innerHTML=html;
+  }
+
   window.APP={
     closeModal:closeModal,manageCourse:manageCourse,saveCourse:saveCourse,
     togglePublish:togglePublish,deleteCourse:deleteCourse,
     addModule:addModule,saveModule:saveModule,deleteModule:deleteModule,
     addLesson:addLesson,saveLesson:saveLesson,editLesson:editLesson,updateLesson:updateLesson,deleteLesson:deleteLesson,
     addQuiz:addQuiz,saveQuiz:saveQuiz,deleteQuiz:deleteQuiz,
-    manageQuiz:manageQuiz,addQuestion:addQuestion,saveQuestion:saveQuestion,deleteQuestion:deleteQuestion
+    manageQuiz:manageQuiz,addQuestion:addQuestion,saveQuestion:saveQuestion,deleteQuestion:deleteQuestion,
+    showTab:function(tab){
+      if(tab==='courses'){
+        document.getElementById('coursesTab').classList.remove('hidden');
+        document.getElementById('usersTab').classList.add('hidden');
+        document.getElementById('tabCourses').className='btn btn-primary btn-sm';
+        document.getElementById('tabUsers').className='btn btn-outline btn-sm';
+      } else {
+        document.getElementById('coursesTab').classList.add('hidden');
+        document.getElementById('usersTab').classList.remove('hidden');
+        document.getElementById('tabCourses').className='btn btn-outline btn-sm';
+        document.getElementById('tabUsers').className='btn btn-primary btn-sm';
+        loadUsers();
+      }
+    },
+    changeRole:async function(userId,newRole){
+      var r=await db.from('profiles').update({role:newRole}).eq('id',userId);
+      if(r.error){toast(r.error.message,'error');return}
+      toast('Role updated!');loadUsers();
+    }
   };
-
   checkSession();
 })();
 </script>
