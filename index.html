@@ -83,6 +83,20 @@
           <input type="password" id="loginPassword" placeholder="Your password" autocomplete="current-password">
         </div>
         <button class="btn btn-primary" id="loginBtn">Sign in</button>
+        <p style="text-align:center;margin-top:14px;font-size:13px;">
+          <a href="#" id="forgotLink" style="color:var(--accent);text-decoration:none;">Forgot your password?</a>
+        </p>
+      </div>
+      
+      <div id="forgotForm" style="display:none;">
+        <div class="form-group">
+          <label for="forgotEmail">Email address</label>
+          <input type="email" id="forgotEmail" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <button class="btn btn-primary" id="forgotBtn">Send reset link</button>
+        <p style="text-align:center;margin-top:14px;font-size:13px;">
+          <a href="#" id="backToLogin" style="color:var(--accent);text-decoration:none;">← Back to sign in</a>
+        </p>
       </div>
       <div id="signupForm" style="display:none;">
         <div class="form-group">
@@ -147,13 +161,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     var logoutBtn = document.getElementById('logoutBtn');
 
     tabLogin.addEventListener('click', function() {
-      tabLogin.classList.add('active');
-      tabSignup.classList.remove('active');
-      loginForm.style.display = 'block';
-      signupForm.style.display = 'none';
-      clearMessage();
-    });
-
+  tabLogin.classList.add('active');
+  tabSignup.classList.remove('active');
+  loginForm.style.display = 'block';
+  signupForm.style.display = 'none';
+  document.getElementById('forgotForm').style.display = 'none';
+  clearMessage();
+});
     tabSignup.addEventListener('click', function() {
       tabSignup.classList.add('active');
       tabLogin.classList.remove('active');
@@ -267,11 +281,37 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       } catch (err) {}
     }
 
-    document.getElementById('loginPassword').addEventListener('keydown', function(e) { if (e.key === 'Enter') loginBtn.click(); });
-    document.getElementById('signupPassword').addEventListener('keydown', function(e) { if (e.key === 'Enter') signupBtn.click(); });
+    document.getElementById('forgotLink').addEventListener('click', function(e) {
+  e.preventDefault();
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('forgotForm').style.display = 'block';
+  clearMessage();
+});
 
-    checkSession();
-  })();
+document.getElementById('backToLogin').addEventListener('click', function(e) {
+  e.preventDefault();
+  document.getElementById('forgotForm').style.display = 'none';
+  document.getElementById('loginForm').style.display = 'block';
+  clearMessage();
+});
+
+document.getElementById('forgotBtn').addEventListener('click', async function() {
+  var email = document.getElementById('forgotEmail').value.trim();
+  if (!email) { showMessage('Please enter your email address.', 'error'); return; }
+  setLoading(this, true);
+  var result = await db.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/index.html'
+  });
+  setLoading(this, false);
+  if (result.error) { showMessage(result.error.message, 'error'); }
+  else { showMessage('Reset link sent! Check your inbox.', 'success'); }
+});
+
+document.getElementById('loginPassword').addEventListener('keydown', function(e) { if (e.key === 'Enter') loginBtn.click(); });
+document.getElementById('signupPassword').addEventListener('keydown', function(e) { if (e.key === 'Enter') signupBtn.click(); });
+
+checkSession();
+})();
 </script>
 </body>
 </html>
