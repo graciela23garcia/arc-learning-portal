@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arc of Tri-Cities — Learning Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #FAFAF7; --bg-card: #FFFFFF; --text: #1A1A18; --text-muted: #6B6B65;
+      --accent: #2D6A4F; --accent-hover: #1B4332; --accent-light: #D8F3DC;
+      --border: #E8E8E3; --error: #C1292E; --error-bg: #FFF0F0;
+      --success: #2D6A4F; --success-bg: #D8F3DC;
+      --font-display: 'Fraunces', serif; --font-body: 'DM Sans', sans-serif;
+      --radius: 12px;
+    }
+    body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; position: relative; overflow: hidden; }
+    body::before { content: ''; position: fixed; top: -120px; right: -120px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(45,106,79,0.08) 0%, transparent 70%); pointer-events: none; }
+    body::after { content: ''; position: fixed; bottom: -80px; left: -80px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(45,106,79,0.05) 0%, transparent 70%); pointer-events: none; }
+    .container { width: 100%; max-width: 420px; animation: fadeUp 0.6s ease-out; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .logo-area { text-align: center; margin-bottom: 36px; }
+    .logo-mark { width: 48px; height: 48px; background: var(--accent); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; color: white; font-family: var(--font-display); font-size: 22px; font-weight: 700; }
+    .logo-area h1 { font-family: var(--font-display); font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; line-height: 1.2; }
+    .logo-area p { color: var(--text-muted); font-size: 15px; margin-top: 6px; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.03); }
+    .tabs { display: flex; margin-bottom: 28px; background: var(--bg); border-radius: 8px; padding: 3px; }
+    .tab { flex: 1; padding: 10px 16px; border: none; background: transparent; font-family: var(--font-body); font-size: 14px; font-weight: 500; color: var(--text-muted); cursor: pointer; border-radius: 6px; transition: all 0.2s ease; }
+    .tab.active { background: var(--bg-card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .tab:hover:not(.active) { color: var(--text); }
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+    input { width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 8px; font-family: var(--font-body); font-size: 15px; color: var(--text); background: var(--bg); transition: border-color 0.2s, box-shadow 0.2s; outline: none; }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); }
+    input::placeholder { color: #B0B0A8; }
+    .btn { width: 100%; padding: 12px 20px; border: none; border-radius: 8px; font-family: var(--font-body); font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; margin-top: 6px; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(45,106,79,0.25); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+    .message { padding: 11px 14px; border-radius: 8px; font-size: 14px; margin-bottom: 18px; display: none; line-height: 1.4; }
+    .message.error { background: var(--error-bg); color: var(--error); display: block; }
+    .message.success { background: var(--success-bg); color: var(--success); display: block; }
+    .user-info { text-align: center; padding: 24px 0 8px; }
+    .user-avatar { width: 56px; height: 56px; border-radius: 50%; background: var(--accent-light); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+    .user-info h2 { font-family: var(--font-display); font-size: 20px; font-weight: 600; }
+    .user-info p { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+    .user-detail { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .user-detail:last-of-type { border-bottom: none; }
+    .user-detail span:first-child { color: var(--text-muted); }
+    .user-detail span:last-child { font-weight: 500; }
+    .role-badge { display: inline-block; padding: 3px 10px; background: var(--accent-light); color: var(--accent); border-radius: 20px; font-size: 12px; font-weight: 500; text-transform: capitalize; }
+    .btn-logout { background: transparent; color: var(--error); border: 1px solid var(--border); margin-top: 20px; }
+    .btn-logout:hover { background: var(--error-bg); border-color: var(--error); }
+    .footer { text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-muted); }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="logo-area">
+    <div class="logo-mark">A</div>
+    <h1>Arc of Tri-Cities</h1>
+    <p>Learning portal</p>
+  </div>
+  <div id="authForms">
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" id="tabLogin">Sign in</button>
+        <button class="tab" id="tabSignup">Create account</button>
+      </div>
+      <div id="messageBox" class="message"></div>
+      <div id="loginForm">
+        <div class="form-group">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" placeholder="Your password" autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary" id="loginBtn">Sign in</button>
+      </div>
+      <div id="signupForm" style="display:none;">
+        <div class="form-group">
+          <label for="signupName">Full name</label>
+          <input type="text" id="signupName" placeholder="Jane Smith" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label for="signupEmail">Email</label>
+          <input type="email" id="signupEmail" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="signupPassword">Password</label>
+          <input type="password" id="signupPassword" placeholder="At least 6 characters" autocomplete="new-password">
+        </div>
+        <button class="btn btn-primary" id="signupBtn">Create account</button>
+      </div>
+    </div>
+  </div>
+  <div id="dashboard" style="display:none;">
+    <div class="card">
+      <div class="user-info">
+        <div class="user-avatar" id="avatarInitial">?</div>
+        <h2 id="userName">Welcome</h2>
+        <p id="userEmail">—</p>
+      </div>
+      <div style="padding: 16px 0;">
+        <div class="user-detail"><span>Role</span><span><span class="role-badge" id="userRole">student</span></span></div>
+        <div class="user-detail"><span>Member since</span><span id="userSince">—</span></div>
+        <div class="user-detail"><span>Status</span><span style="color: var(--success);">Authenticated</span></div>
+      </div>
+      <button class="btn btn-logout" id="logoutBtn">Sign out</button>
+    </div>
+  </div>
+  <div class="footer">Arc of Tri-Cities &middot; Empowering learners</div>
+</div>
+<script>
