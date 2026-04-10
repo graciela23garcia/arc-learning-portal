@@ -215,7 +215,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           email: email, password: password,
           options: { 
           data: { full_name: name },
-          emailRedirectTo: 'https://graciela23garcia.github.io/          arc-learning-portal/index.html'
+          emailRedirectTo: 'https://learn.arcoftricities.com/index.html'
 }
         });
         setLoading(signupBtn, false);
@@ -306,7 +306,7 @@ document.getElementById('forgotBtn').addEventListener('click', async function() 
   if (!email) { showMessage('Please enter your email address.', 'error'); return; }
   setLoading(this, true);
   var result = await db.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + '/index.html'
+    redirectTo: 'https://learn.arcoftricities.com/index.html'
   });
   setLoading(this, false);
   if (result.error) { showMessage(result.error.message, 'error'); }
