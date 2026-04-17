@@ -428,8 +428,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   // PUBLIC API (for onclick handlers in dynamic HTML)
   async function loadUsers(){
-    var r=await db.from('profiles').select('id,full_name,role,created_at');
-    var users=r.data||[];
+    var r = await db.rpc('get_all_profiles');
+    var users = r.data || [];
+    console.log('Users loaded:', users.length, r.error);
     if(!users.length){document.getElementById('userList').innerHTML='<div class="empty">No users yet.</div>';return}
     var html='';
     users.forEach(function(u){
