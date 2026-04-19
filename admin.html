@@ -97,7 +97,8 @@
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <button class="btn btn-primary btn-sm" id="tabCourses" onclick="APP.showTab('courses')">Courses</button>
       <button class="btn btn-outline btn-sm" id="tabUsers" onclick="APP.showTab('users')">Users</button>
-    </div>
+      <button class="btn btn-outline btn-sm" id="tabProgress" onclick="APP.showTab('progress')">Progress</button>
+    </div>  
     <div id="coursesTab">
       <div class="card">
         <div class="card-header">
@@ -112,10 +113,23 @@
         <div class="card-header">
           <h2>Users</h2>
         </div>
+        <div style="margin-bottom:14px;">
+          <input id="userSearch" type="text" placeholder="Search users..." oninput="APP.filterUsers()" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);">
+        </div>
         <div id="userList"><div class="empty">Loading users...</div></div>
       </div>
     </div>
-  </div>
+    <div id="progressTab" class="hidden">
+      <div class="card">
+        <div class="card-header">
+          <h2>Course Progress</h2>
+        </div>
+        <div style="margin-bottom:14px;">
+          <input id="progressSearch" type="text" placeholder="Search users..." oninput="APP.filterProgress()" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font-body);">
+        </div>
+        <div id="progressList"><div class="empty">Loading progress...</div></div>
+      </div>
+    </div>
 
 <div id="modalBg" class="modal-bg hidden"></div>
 
@@ -455,6 +469,51 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       });
       document.getElementById('userList').innerHTML=html;
     }
+    async function loadProgress(){
+    var pr=await db.rpc('get_all_profiles');
+    var users=pr.data||[];
+    var cr=await db.from('courses').select('id,title').eq('is_published',true);
+    var allCourses=cr.data||[];
+    var er=await db.from('enrollments').select('user_id,course_id,completed_at');
+    var enrollments=er.data||[];
+
+    if(!users.length){document.getElementById('progressList').innerHTML='<div class="empty">No users yet.</div>';return}
+
+    var html='';
+    users.forEach(function(u,i){
+      var userEnrollments=enrollments.filter(function(e){return e.user_id===u.id});
+      var completed=userEnrollments.filter(function(e){return e.completed_at}).length;
+      var total=userEnrollments.length;
+      var name=esc(u.full_name||'Unnamed user');
+
+      html+='<div class="list-item" style="flex-direction:column;align-items:stretch;cursor:pointer;" onclick="APP.toggleProgress(\'prog_'+i+'\')">';
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;">';
+      html+='<div class="list-item-info"><h3>'+name+'</h3>';
+      html+='<p>'+completed+' of '+total+' courses completed</p></div>';
+      html+='<span id="prog_'+i+'_arrow" style="font-size:12px;color:var(--text-muted);">▶ View</span>';
+      html+='</div>';
+
+      html+='<div id="prog_'+i+'" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">';
+      if(!allCourses.length){
+        html+='<p style="font-size:13px;color:var(--text-muted);">No published courses.</p>';
+      } else {
+        allCourses.forEach(function(c){
+          var enrollment=userEnrollments.find(function(e){return e.course_id===c.id});
+          var status,color;
+          if(!enrollment){status='Not started';color='var(--text-muted)';}
+          else if(enrollment.completed_at){status='✓ Completed';color='#065F46';}
+          else{status='In Progress';color='#92400E';}
+          html+='<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">';
+          html+='<span>'+esc(c.title)+'</span>';
+          html+='<span style="color:'+color+';font-weight:500;">'+status+'</span>';
+          html+='</div>';
+        });
+      }
+      html+='</div>';
+      html+='</div>';
+    });
+    document.getElementById('progressList').innerHTML=html;
+  }
   
     window.APP={
       closeModal:closeModal,
@@ -480,18 +539,25 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       saveQuestion:saveQuestion,
       deleteQuestion:deleteQuestion,
       showTab:function(tab){
-        if(tab==='courses'){
-          document.getElementById('coursesTab').classList.remove('hidden');
-          document.getElementById('usersTab').classList.add('hidden');
-          document.getElementById('tabCourses').className='btn btn-primary btn-sm';
-          document.getElementById('tabUsers').className='btn btn-outline btn-sm';
-        } else {
-          document.getElementById('coursesTab').classList.add('hidden');
-          document.getElementById('usersTab').classList.remove('hidden');
-          document.getElementById('tabCourses').className='btn btn-outline btn-sm';
-          document.getElementById('tabUsers').className='btn btn-primary btn-sm';
-          loadUsers();
-        }
+      document.getElementById('coursesTab').classList.add('hidden');
+      document.getElementById('usersTab').classList.add('hidden');
+      document.getElementById('progressTab').classList.add('hidden');
+      document.getElementById('tabCourses').className='btn btn-outline btn-sm';
+      document.getElementById('tabUsers').className='btn btn-outline btn-sm';
+      document.getElementById('tabProgress').className='btn btn-outline btn-sm';
+      if(tab==='courses'){
+        document.getElementById('coursesTab').classList.remove('hidden');
+        document.getElementById('tabCourses').className='btn btn-primary btn-sm';
+      } else if(tab==='users'){
+        document.getElementById('usersTab').classList.remove('hidden');
+        document.getElementById('tabUsers').className='btn btn-primary btn-sm';
+        loadUsers();
+      } else if(tab==='progress'){
+        document.getElementById('progressTab').classList.remove('hidden');
+        document.getElementById('tabProgress').className='btn btn-primary btn-sm';
+        loadProgress();
+      }
+    
       },
       updateLessonFields:function(){
         var type=document.getElementById('mLType').value;
@@ -510,6 +576,34 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         }
         document.getElementById('lessonFields').innerHTML=fields;
       },
+      toggleProgress:function(id){
+  var el=document.getElementById(id);
+  var arrow=document.getElementById(id+'_arrow');
+  if(el.style.display==='none'){
+    el.style.display='block';
+    arrow.textContent='▼ Hide';
+  } else {
+    el.style.display='none';
+    arrow.textContent='▶ View';
+  }
+},
+filterUsers:function(){
+  var search=document.getElementById('userSearch').value.toLowerCase();
+  var items=document.querySelectorAll('#userList .list-item');
+  items.forEach(function(item){
+    var name=item.querySelector('h3').textContent.toLowerCase();
+    item.style.display=name.includes(search)?'flex':'none';
+  });
+},
+filterProgress:function(){
+  var search=document.getElementById('progressSearch').value.toLowerCase();
+  var items=document.querySelectorAll('#progressList .list-item');
+  items.forEach(function(item){
+    var name=item.querySelector('h3').textContent.toLowerCase();
+    item.style.display=name.includes(search)?'flex':'none';
+  });
+},
+
       changeRole:async function(userId,newRole){
         var r=await db.from('profiles').update({role:newRole}).eq('id',userId);
         if(r.error){toast(r.error.message,'error');return}
