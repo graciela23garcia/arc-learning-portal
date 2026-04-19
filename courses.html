@@ -10,7 +10,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #F7F7F4; --bg-card: #FFFFFF; --text: #1A1A18; --text-muted: #6B6B65;
-      --accent: #2D6A4F; --accent-hover: #1B4332; --accent-light: #D8F3DC;
+      --accent: #E8873A; --accent-hover: #C96B20; --accent-light: #FEF0E4;
       --border: #E8E8E3; --sidebar-w: 300px; --topbar-h: 60px;
       --font-display: 'Fraunces', serif; --font-body: 'DM Sans', sans-serif; --radius: 10px;
     }
@@ -102,6 +102,26 @@
     .auth-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 40px; text-align: center; max-width: 360px; }
     .auth-card h2 { font-family: var(--font-display); font-size: 22px; margin-bottom: 8px; }
     .auth-card p { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+    @media (max-width: 768px) {
+      :root { --sidebar-w: 100%; --topbar-h: 56px; }
+      .topbar { padding: 0 16px; }
+      .topbar h1 { font-size: 14px; }
+      .topbar-right { gap: 6px; }
+      .topbar-right .user-name { display: none; }
+      .btn-sm { padding: 5px 10px; font-size: 11px; }
+      .layout { flex-direction: column; }
+      .sidebar { width: 100%; position: relative; top: 0; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+      .sidebar-header { padding: 16px; }
+      .main { margin-left: 0; padding: 16px; max-width: 100%; }
+      .courses-grid { grid-template-columns: 1fr; }
+      .lesson-title { font-size: 20px; }
+      .lesson-actions { flex-direction: column; gap: 10px; align-items: stretch; }
+      .complete-btn { width: 100%; text-align: center; }
+      .quiz-section { padding: 20px; }
+      .completion-banner { padding: 28px 20px; }
+      .completion-banner .trophy { font-size: 36px; }
+    }
+
   </style>
 </head>
 <body>
@@ -118,8 +138,7 @@
 <div id="app" style="display:none;">
   <div class="topbar">
     <div class="topbar-left">
-      <div class="logo-mark">A</div>
-      <h1>Arc of Tri-Cities</h1>
+      <img src="https://images.squarespace-cdn.com/content/v1/5e78c49d1e238d030f3f1e8d/63207967-5ca7-49fa-ac96-ce423915ccbb/Arc_TriCities_Color_Rev_PNG.png" style="height:36px;object-fit:contain;">
     </div>
     <div class="topbar-right">
       <span class="user-name" id="topbarName"></span>
