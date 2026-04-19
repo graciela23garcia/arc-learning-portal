@@ -124,6 +124,7 @@
     <div class="topbar-right">
       <span class="user-name" id="topbarName"></span>
       <button class="btn btn-outline btn-sm" id="backBtn" style="display:none;" onclick="showCourseBrowser()">← All Courses</button>
+      <button class="btn btn-outline btn-sm" id="adminBtn" style="display:none;" onclick="window.location.href='admin.html'">⚙️ Admin Dashboard</button>
       <button class="btn btn-outline btn-sm" id="signOutBtn">Sign out</button>
     </div>
   </div>
@@ -199,6 +200,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     currentUser = s.data.session.user;
     document.getElementById('app').style.display = 'block';
     document.getElementById('topbarName').textContent = currentUser.user_metadata?.full_name || currentUser.email;
+    var pr = await db.from('profiles').select('role').eq('id', currentUser.id).single();
+    if(pr.data && pr.data.role === 'admin') {
+      document.getElementById('adminBtn').style.display = 'inline-block';
+    }
     document.getElementById('signOutBtn').addEventListener('click', async function() {
       await db.auth.signOut();
       window.location.href = 'index.html';
