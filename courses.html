@@ -76,8 +76,8 @@
     .pdf-wrap a { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: var(--accent); color: white; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 14px; }
     .link-wrap { padding: 24px; text-align: center; }
     .link-wrap a { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: var(--accent); color: white; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 14px; }
-    .lesson-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
-    .complete-btn { padding: 12px 28px; background: var(--accent); color: white; border: none; border-radius: 8px; font-family: var(--font-body); font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    .lesson-actions { display: flex; justify-content: flex-end; align-items: center; margin-top: 20px; gap: 10px; }
+        .complete-btn { padding: 12px 28px; background: var(--accent); color: white; border: none; border-radius: 8px; font-family: var(--font-body); font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
     .complete-btn:hover { background: var(--accent-hover); }
     .complete-btn.already-done { background: #D1FAE5; color: #065F46; cursor: default; }
     .quiz-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-top: 20px; }
@@ -345,14 +345,21 @@ html += '<span class="badge ' + (completed ? 'badge-completed' : enrolled ? 'bad
     document.getElementById('lessonBody').innerHTML = bodyHtml;
     var isCompleted = completedLessons.includes(lesson.id);
     var idx = allLessons.findIndex(function(l) { return l.id === lesson.id; });
-    var navHtml = '<div style="display:flex;gap:8px;">';
-    if (idx > 0) navHtml += '<button class="btn btn-outline btn-sm" onclick="openLesson(\'' + allLessons[idx-1].id + '\')">← Previous</button>';
-    if (idx < allLessons.length-1 && isCompleted) navHtml += '<button class="btn btn-outline btn-sm" onclick="openLesson(\'' + allLessons[idx+1].id + '\')">Next →</button>';
-    navHtml += '</div>';
-    var completeHtml = isCompleted ? '<button class="complete-btn already-done">✓ Completed</button>' : '<button class="complete-btn" onclick="markComplete(\'' + lesson.id + '\')">Mark as Complete →</button>';
-    document.getElementById('lessonActions').innerHTML = navHtml + completeHtml;
+    var actionsHtml = '';
+    if (isCompleted) {
+      if (idx < allLessons.length - 1) {
+        actionsHtml = '<button class="complete-btn" onclick="openLesson(\'' + allLessons[idx+1].id + '\')">Continue →</button>';
+      } else {
+        actionsHtml = '<button class="complete-btn already-done">✓ Course Complete</button>';
+      }
+    } else {
+      actionsHtml = '<button class="complete-btn" onclick="markComplete(\'' + lesson.id + '\')">Complete and Continue →</button>';
+    }
+    if (idx > 0) {
+      actionsHtml = '<button class="btn btn-outline btn-sm" onclick="openLesson(\'' + allLessons[idx-1].id + '\')">← Previous</button>' + actionsHtml;
+    }
+    document.getElementById('lessonActions').innerHTML = '<div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;">' + actionsHtml + '</div>';
     await loadQuiz(lesson);
-    checkCourseCompletion();
     window.scrollTo(0, 0);
   };
 
