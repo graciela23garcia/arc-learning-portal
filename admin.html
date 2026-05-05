@@ -369,7 +369,6 @@ setTimeout(function(){
     async function addLesson(moduleId,courseId){
       showModal('<h2>New lesson</h2>\
   <div class="form-row"><label>Lesson title</label><input id="mLTitle" placeholder="e.g. Drug and Alcohol Training"></div>\
-  <div class="form-row"><label>Order # (1, 2, 3...)</label><input id="mLOrder" type="number" placeholder="1" min="1"></div>\
   <div class="form-row"><label>Content type</label><select id="mLType" onchange="APP.updateLessonFields()"><option value="text">Text</option><option value="video">Video</option><option value="pdf">PDF</option><option value="link">External link</option></select></div>\
   <div id="lessonFields">\
 <div class="form-row"><label>Content</label><div id="quillEditor" style="height:200px;background:white;border-radius:8px;"></div><input type="hidden" id="mLBody"></div>\
