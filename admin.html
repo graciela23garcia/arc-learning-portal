@@ -368,67 +368,79 @@ setTimeout(function(){
   
     async function addLesson(moduleId,courseId){
       showModal('<h2>New lesson</h2>\
-  <div class="form-row"><label>Lesson title</label><input id="mLTitle" placeholder="e.g. Drug and Alcohol Training"></div>\
-  <div class="form-row"><label>Content type</label><select id="mLType" onchange="APP.updateLessonFields()"><option value="text">Text</option><option value="video">Video</option><option value="pdf">PDF</option><option value="link">External link</option></select></div>\
-  <div id="lessonFields">\
-<div class="form-row"><label>Content</label><div id="quillEditor" style="height:200px;background:white;border-radius:8px;"></div><input type="hidden" id="mLBody"></div>\
-</div>\
-  <div class="modal-actions"><button class="btn btn-outline" onclick="APP.manageCourse(\''+courseId+'\')">Back</button><button class="btn btn-primary" onclick="APP.saveLesson(\''+moduleId+'\',\''+courseId+'\')">Create</button></div>');
-  setTimeout(function(){
+<div class="form-row"><label>Lesson title</label><input id="mLTitle" placeholder="e.g. Drug and Alcohol Training"></div>\
+<div class="form-row"><label>Video URL (optional)</label><input id="mLVideo" placeholder="https://www.youtube.com/watch?v=..."></div>\
+<div class="form-row"><label>PDF URL (optional)</label><input id="mLPdf" placeholder="https://docs.google.com/..."></div>\
+<div class="form-row"><label>Text content (optional)</label><div id="quillEditor" style="height:200px;background:white;border-radius:8px;"></div><input type="hidden" id="mLBody"></div>\
+<div class="modal-actions"><button class="btn btn-outline" onclick="APP.manageCourse(\''+courseId+'\')">Back</button><button class="btn btn-primary" onclick="APP.saveLesson(\''+moduleId+'\',\''+courseId+'\')">Create</button></div>');
+setTimeout(function(){
   if(window._quill){window._quill=null;}
   window._quill=new Quill("#quillEditor",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],["bold","italic","underline"],[{list:"ordered"},{list:"bullet"}],["link"],["clean"]]}});
 },100);
     }
   
     async function saveLesson(moduleId,courseId){
-      var title=document.querySelector('#mLTitle').value.trim();
-      var ctype=document.querySelector('#mLType').value;
-      var body=window._quill?window._quill.root.innerHTML:'';
-      var desc=document.querySelector('#mLDesc')?document.querySelector('#mLDesc').value.trim():'';
-      if(!title){toast('Please enter a title','error');return}
-      var existingLessons=await db.from('lessons').select('id').eq('module_id',moduleId);
-      var order=(existingLessons.data||[]).length;
-      var row={module_id:moduleId,title:title,content_type:ctype,content_body:null,sort_order:order};
-      if(ctype==='text'){row.content_body=body;}
-      else if(ctype==='video'){row.video_url=body;row.content_body=desc||null;}
-      else if(ctype==='pdf'){row.pdf_url=body;row.content_body=desc||null;}
-      else{row.external_link=body;row.content_body=desc||null;}
-      var r=await db.from('lessons').insert(row).select();
-      if(r.error){toast(r.error.message,'error');return}
-      toast('Lesson created!');manageCourse(courseId);
-    }
+    var title=document.querySelector('#mLTitle').value.trim();
+    var video=document.querySelector('#mLVideo').value.trim();
+    var pdf=document.querySelector('#mLPdf').value.trim();
+    var body=window._quill?window._quill.root.innerHTML:'';
+    if(!title){toast('Please enter a title','error');return}
+    var existingLessons=await db.from('lessons').select('id').eq('module_id',moduleId);
+    var order=(existingLessons.data||[]).length;
+    // Determine primary content type
+    var ctype='text';
+    if(video) ctype='video';
+    else if(pdf) ctype='pdf';
+    var row={module_id:moduleId,title:title,content_type:ctype,sort_order:order,
+      video_url:video||null,
+      pdf_url:pdf||null,
+      content_body:body||null
+    };
+    var r=await db.from('lessons').insert(row).select();
+    if(r.error){toast(r.error.message,'error');return}
+    toast('Lesson created!');manageCourse(courseId);
+  }
   
-    async function editLesson(lessonId,courseId){
+  async function editLesson(lessonId,courseId){
     var lr=await db.from('lessons').select('*').eq('id',lessonId).single();
     if(!lr.data)return;
     var l=lr.data;
-    var bodyVal=l.video_url||l.pdf_url||l.external_link||'';
-    window._editingLessonBody = l.content_type==='text' ? (l.content_body||'') : '';
-    showModal('<h2>Edit lesson</h2><div class="form-row"><label>Lesson title</label><input id="mLTitle" value="'+esc(l.title)+'"></div><div class="form-row"><label>Content type</label><select id="mLType"><option value="text"'+(l.content_type==='text'?' selected':'')+'>Text</option><option value="video"'+(l.content_type==='video'?' selected':'')+'>Video</option><option value="pdf"'+(l.content_type==='pdf'?' selected':'')+'>PDF link</option><option value="link"'+(l.content_type==='link'?' selected':'')+'>External link</option></select></div><div id="lessonFields"><div class="form-row"><label>Content</label>'+(l.content_type==='text'?'<div id="quillEditor" style="height:200px;background:white;border-radius:8px;"></div><input type="hidden" id="mLBody">':'<input id="mLBody" value="'+esc(bodyVal)+'">')+'</div></div><div class="modal-actions"><button class="btn btn-outline" onclick="APP.manageCourse(\''+courseId+'\')">Back</button><button class="btn btn-primary" onclick="APP.updateLesson(\''+lessonId+'\',\''+courseId+'\')">Save changes</button></div>');
-    if(l.content_type==='text'){
-      setTimeout(function(){
-        if(window._quill){window._quill=null;}
-        window._quill=new Quill("#quillEditor",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],["bold","italic","underline"],[{list:"ordered"},{list:"bullet"}],["link"],["clean"]]}});
-        window._quill.root.innerHTML=window._editingLessonBody;
-        window._editingLessonBody=null;
-      },100);
-    }
+    window._editingLessonBody = l.content_body||'';
+    showModal('<h2>Edit lesson</h2>\
+<div class="form-row"><label>Lesson title</label><input id="mLTitle" value="'+esc(l.title)+'"></div>\
+<div class="form-row"><label>Video URL (optional)</label><input id="mLVideo" placeholder="https://www.youtube.com/watch?v=..." value="'+esc(l.video_url||'')+'"></div>\
+<div class="form-row"><label>PDF URL (optional)</label><input id="mLPdf" placeholder="https://docs.google.com/..." value="'+esc(l.pdf_url||'')+'"></div>\
+<div class="form-row"><label>Text content (optional)</label><div id="quillEditor" style="height:200px;background:white;border-radius:8px;"></div><input type="hidden" id="mLBody"></div>\
+<div class="modal-actions"><button class="btn btn-outline" onclick="APP.manageCourse(\''+courseId+'\')">Back</button><button class="btn btn-primary" onclick="APP.updateLesson(\''+lessonId+'\',\''+courseId+'\')">Save changes</button></div>');
+    setTimeout(function(){
+      if(window._quill){window._quill=null;}
+      window._quill=new Quill("#quillEditor",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],["bold","italic","underline"],[{list:"ordered"},{list:"bullet"}],["link"],["clean"]]}});
+      window._quill.root.innerHTML=window._editingLessonBody;
+      window._editingLessonBody=null;
+    },100);
   }
   
-    async function updateLesson(lessonId,courseId){
-      var title=document.querySelector('#mLTitle').value.trim();
-      var ctype=document.querySelector('#mLType').value;
-      var body=window._quill?window._quill.root.innerHTML:'';
-      if(!title){toast('Please enter a title','error');return}
-      var row={title:title,content_type:ctype,content_body:null,video_url:null,pdf_url:null,external_link:null,updated_at:new Date().toISOString()};
-      if(ctype==='text')row.content_body=body;
-      else if(ctype==='video')row.video_url=body;
-      else if(ctype==='pdf')row.pdf_url=body;
-      else row.external_link=body;
-      var r=await db.from('lessons').update(row).eq('id',lessonId);
-      if(r.error){toast(r.error.message,'error');return}
-      toast('Lesson updated!');manageCourse(courseId);
-    }
+  
+  async function updateLesson(lessonId,courseId){
+    var title=document.querySelector('#mLTitle').value.trim();
+    var video=document.querySelector('#mLVideo').value.trim();
+    var pdf=document.querySelector('#mLPdf').value.trim();
+    var body=window._quill?window._quill.root.innerHTML:'';
+    if(!title){toast('Please enter a title','error');return}
+    var ctype='text';
+    if(video) ctype='video';
+    else if(pdf) ctype='pdf';
+    var row={title:title,content_type:ctype,
+      video_url:video||null,
+      pdf_url:pdf||null,
+      content_body:body||null,
+      external_link:null,
+      updated_at:new Date().toISOString()
+    };
+    var r=await db.from('lessons').update(row).eq('id',lessonId);
+    if(r.error){toast(r.error.message,'error');return}
+    toast('Lesson updated!');manageCourse(courseId);
+  }
   
     async function deleteLesson(id,courseId){
       if(!confirm('Delete this lesson?'))return;

@@ -333,16 +333,20 @@ html += '<span class="badge ' + (completed ? 'badge-completed' : enrolled ? 'bad
     document.getElementById('lessonTitle').textContent = lesson.title;
     renderSidebar();
     var bodyHtml = '';
-    if (lesson.content_type === 'video' && lesson.video_url) {
-      var embedUrl = getYouTubeEmbed(lesson.video_url);
-      bodyHtml = embedUrl ? '<div class="video-wrap"><iframe src="' + embedUrl + '" allowfullscreen></iframe></div>' : '<div class="text-content"><a href="' + esc(lesson.video_url) + '" target="_blank">Open video</a></div>';
-    } else if (lesson.content_type === 'pdf' && lesson.pdf_url) {
-      bodyHtml = '<div class="pdf-wrap"><a href="' + esc(lesson.pdf_url) + '" target="_blank">📄 Open PDF</a></div>';
-    } else if (lesson.content_type === 'link' && lesson.external_link) {
-      bodyHtml = '<div class="link-wrap"><a href="' + esc(lesson.external_link) + '" target="_blank">🔗 Open Link</a></div>';
-    } else {
-      bodyHtml = '<div class="text-content ql-snow"><div class="ql-editor" style="padding:28px;">' + (lesson.content_body || '<p>No content yet.</p>') + '</div></div>';
-    }
+if (lesson.video_url) {
+  var embedUrl = getYouTubeEmbed(lesson.video_url);
+  bodyHtml += embedUrl ? '<div class="video-wrap"><iframe src="' + embedUrl + '" allowfullscreen></iframe></div>' : '<div class="text-content"><a href="' + esc(lesson.video_url) + '" target="_blank">Open video</a></div>';
+}
+if (lesson.pdf_url) {
+  bodyHtml += '<div class="pdf-wrap"><a href="' + esc(lesson.pdf_url) + '" target="_blank">📄 Open PDF</a></div>';
+}
+if (lesson.external_link) {
+  bodyHtml += '<div class="link-wrap"><a href="' + esc(lesson.external_link) + '" target="_blank">🔗 Open Link</a></div>';
+}
+if (lesson.content_body) {
+  bodyHtml += '<div class="text-content ql-snow"><div class="ql-editor" style="padding:28px;">' + lesson.content_body + '</div></div>';
+}
+if (!bodyHtml) bodyHtml = '<div class="text-content"><p>No content yet.</p></div>';
     document.getElementById('lessonBody').innerHTML = bodyHtml;
     var isCompleted = completedLessons.includes(lesson.id);
     var idx = allLessons.findIndex(function(l) { return l.id === lesson.id; });
