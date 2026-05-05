@@ -5,8 +5,14 @@
   <link rel="icon" type="image/png" href="https://images.squarespace-cdn.com/content/v1/5e78c49d1e238d030f3f1e8d/63207967-5ca7-49fa-ac96-ce423915ccbb/Arc_TriCities_Color_Rev_PNG.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Arc of Tri-Cities — Admin Dashboard</title>
+
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+ <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--bg:#FAFAF7;--bg-card:#FFF;--text:#1A1A18;--text-muted:#6B6B65;
@@ -236,12 +242,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
   
     $('addCourseBtn').addEventListener('click',function(){
-      showModal('<h2>New course</h2><div class="form-row"><label>Course title</label><input id="mTitle" placeholder="e.g. Life Skills 101"></div><div class="form-row"><label>Description</label><textarea id="mDesc" placeholder="What students will learn..."></textarea></div><div class="modal-actions"><button class="btn btn-outline" onclick="APP.closeModal()">Cancel</button><button class="btn btn-primary" onclick="APP.saveCourse()">Create course</button></div>');
+      showModal('<h2>New course</h2><div class="form-row"><label>Course title</label><input id="mTitle" placeholder="e.g. Life Skills 101"></div><div class="form-row"><label>Description</label><div id="quillDesc" style="height:150px;background:white;border-radius:8px;"></div><input type="hidden" id="mDesc"></div><div class="modal-actions"><button class="btn btn-outline" onclick="APP.closeModal()">Cancel</button><button class="btn btn-primary" onclick="APP.saveCourse()">Create course</button></div>');
+setTimeout(function(){
+  if(window._quillDesc){window._quillDesc=null;}
+  window._quillDesc=new Quill("#quillDesc",{theme:"snow",modules:{toolbar:[["bold","italic","underline"],[{list:"ordered"},{list:"bullet"}],["clean"]]}});
+},100);
     });
   
     async function saveCourse(){
       var title=document.querySelector('#mTitle').value.trim();
-      var desc=document.querySelector('#mDesc').value.trim();
+      var desc=window._quillDesc?window._quillDesc.root.innerHTML:'';
       if(!title){toast('Please enter a title','error');return}
       var r=await db.from('courses').insert({title:title,description:desc,created_by:currentUser.id,sort_order:courses.length}).select();
       if(r.error){toast(r.error.message,'error');return}
@@ -249,14 +259,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
   
     async function editCourse(courseId){
-      var course=courses.find(function(c){return c.id===courseId});
-      if(!course)return;
-      showModal('<h2>Edit course</h2><div class="form-row"><label>Course title</label><input id="mTitle" value="'+esc(course.title)+'"></div><div class="form-row"><label>Description</label><textarea id="mDesc">'+esc(course.description||'')+'</textarea></div><div class="modal-actions"><button class="btn btn-outline" onclick="APP.closeModal()">Cancel</button><button class="btn btn-primary" onclick="APP.updateCourse(\''+courseId+'\')">Save changes</button></div>');
-    }
+    var course=courses.find(function(c){return c.id===courseId});
+    if(!course)return;
+    showModal('<h2>Edit course</h2><div class="form-row"><label>Course title</label><input id="mTitle" value="'+esc(course.title)+'"></div><div class="form-row"><label>Description</label><div id="quillDesc" style="height:150px;background:white;border-radius:8px;"></div><input type="hidden" id="mDesc"></div><div class="modal-actions"><button class="btn btn-outline" onclick="APP.closeModal()">Cancel</button><button class="btn btn-primary" onclick="APP.updateCourse(\''+courseId+'\')">Save changes</button></div>');
+    setTimeout(function(){
+      if(window._quillDesc){window._quillDesc=null;}
+      window._quillDesc=new Quill("#quillDesc",{theme:"snow",modules:{toolbar:[["bold","italic","underline"],[{list:"ordered"},{list:"bullet"}],["clean"]]}});
+      window._quillDesc.root.innerHTML=course.description||'';
+    },100);
+  }
   
     async function updateCourse(courseId){
       var title=document.querySelector('#mTitle').value.trim();
-      var desc=document.querySelector('#mDesc').value.trim();
+      var desc=window._quillDesc?window._quillDesc.root.innerHTML:'';
       if(!title){toast('Please enter a title','error');return}
       var r=await db.from('courses').update({title:title,description:desc}).eq('id',courseId);
       if(r.error){toast(r.error.message,'error');return}
@@ -339,15 +354,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="form-row"><label>Lesson title</label><input id="mLTitle" placeholder="e.g. Drug and Alcohol Training"></div>\
   <div class="form-row"><label>Content type</label><select id="mLType" onchange="APP.updateLessonFields()"><option value="text">Text</option><option value="video">Video</option><option value="pdf">PDF</option><option value="link">External link</option></select></div>\
   <div id="lessonFields">\
-  <div class="form-row"><label>Content</label><textarea id="mLBody" placeholder="Write lesson content here..." rows="6"></textarea></div>\
-  </div>\
+<div class="form-row"><label>Content</label><div id="quillEditor" style="height:200px;background:white;border-radius:8px;"></div><input type="hidden" id="mLBody"></div>\
+</div>\
   <div class="modal-actions"><button class="btn btn-outline" onclick="APP.manageCourse(\''+courseId+'\')">Back</button><button class="btn btn-primary" onclick="APP.saveLesson(\''+moduleId+'\',\''+courseId+'\')">Create</button></div>');
+  setTimeout(function(){
+  if(window._quill){window._quill=null;}
+  window._quill=new Quill("#quillEditor",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],["bold","italic","underline"],[{list:"ordered"},{list:"bullet"}],["link"],["clean"]]}});
+},100);
     }
   
     async function saveLesson(moduleId,courseId){
       var title=document.querySelector('#mLTitle').value.trim();
       var ctype=document.querySelector('#mLType').value;
-      var body=document.querySelector('#mLBody').value.trim();
+      var body=window._quill?window._quill.root.innerHTML:'';
       var desc=document.querySelector('#mLDesc')?document.querySelector('#mLDesc').value.trim():'';
       if(!title){toast('Please enter a title','error');return}
       var row={module_id:moduleId,title:title,content_type:ctype,content_body:null};
@@ -361,17 +380,26 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
   
     async function editLesson(lessonId,courseId){
-      var lr=await db.from('lessons').select('*').eq('id',lessonId).single();
-      if(!lr.data)return;
-      var l=lr.data;
-      var bodyVal=l.video_url||l.pdf_url||l.external_link||l.content_body||'';
-      showModal('<h2>Edit lesson</h2><div class="form-row"><label>Lesson title</label><input id="mLTitle" value="'+esc(l.title)+'"></div><div class="form-row"><label>Content type</label><select id="mLType"><option value="text"'+(l.content_type==='text'?' selected':'')+'>Text</option><option value="video"'+(l.content_type==='video'?' selected':'')+'>Video</option><option value="pdf"'+(l.content_type==='pdf'?' selected':'')+'>PDF link</option><option value="link"'+(l.content_type==='link'?' selected':'')+'>External link</option></select></div><div class="form-row"><label>Content</label><textarea id="mLBody" rows="6">'+esc(bodyVal)+'</textarea></div><div class="modal-actions"><button class="btn btn-outline" onclick="APP.manageCourse(\''+courseId+'\')">Back</button><button class="btn btn-primary" onclick="APP.updateLesson(\''+lessonId+'\',\''+courseId+'\')">Save changes</button></div>');
+    var lr=await db.from('lessons').select('*').eq('id',lessonId).single();
+    if(!lr.data)return;
+    var l=lr.data;
+    var bodyVal=l.video_url||l.pdf_url||l.external_link||'';
+    window._editingLessonBody = l.content_type==='text' ? (l.content_body||'') : '';
+    showModal('<h2>Edit lesson</h2><div class="form-row"><label>Lesson title</label><input id="mLTitle" value="'+esc(l.title)+'"></div><div class="form-row"><label>Content type</label><select id="mLType"><option value="text"'+(l.content_type==='text'?' selected':'')+'>Text</option><option value="video"'+(l.content_type==='video'?' selected':'')+'>Video</option><option value="pdf"'+(l.content_type==='pdf'?' selected':'')+'>PDF link</option><option value="link"'+(l.content_type==='link'?' selected':'')+'>External link</option></select></div><div id="lessonFields"><div class="form-row"><label>Content</label>'+(l.content_type==='text'?'<div id="quillEditor" style="height:200px;background:white;border-radius:8px;"></div><input type="hidden" id="mLBody">':'<input id="mLBody" value="'+esc(bodyVal)+'">')+'</div></div><div class="modal-actions"><button class="btn btn-outline" onclick="APP.manageCourse(\''+courseId+'\')">Back</button><button class="btn btn-primary" onclick="APP.updateLesson(\''+lessonId+'\',\''+courseId+'\')">Save changes</button></div>');
+    if(l.content_type==='text'){
+      setTimeout(function(){
+        if(window._quill){window._quill=null;}
+        window._quill=new Quill("#quillEditor",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],["bold","italic","underline"],[{list:"ordered"},{list:"bullet"}],["link"],["clean"]]}});
+        window._quill.root.innerHTML=window._editingLessonBody;
+        window._editingLessonBody=null;
+      },100);
     }
+  }
   
     async function updateLesson(lessonId,courseId){
       var title=document.querySelector('#mLTitle').value.trim();
       var ctype=document.querySelector('#mLType').value;
-      var body=document.querySelector('#mLBody').value.trim();
+      var body=window._quill?window._quill.root.innerHTML:'';
       if(!title){toast('Please enter a title','error');return}
       var row={title:title,content_type:ctype,content_body:null,video_url:null,pdf_url:null,external_link:null,updated_at:new Date().toISOString()};
       if(ctype==='text')row.content_body=body;
@@ -572,7 +600,12 @@ html+='</div>';
           fields='<div class="form-row"><label>External link URL</label><input id="mLBody" placeholder="https://..."></div>';
           fields+='<div class="form-row"><label>Description (optional)</label><textarea id="mLDesc" placeholder="Describe what this link contains..." rows="4"></textarea></div>';
         } else {
-          fields='<div class="form-row"><label>Content</label><textarea id="mLBody" placeholder="Write lesson content here..." rows="6"></textarea></div>';
+          fields='<div class="form-row"><label>Content</label><div id="quillEditor" style="height:200px;background:white;border-radius:8px;"></div><input type="hidden" id="mLBody"></div>';
+setTimeout(function(){
+  if(window._quill){window._quill=null;}
+  window._quill=new Quill("#quillEditor",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],["bold","italic","underline"],[{list:"ordered"},{list:"bullet"}],["link"],["clean"]]}});
+  if(window._editingLessonBody){window._quill.root.innerHTML=window._editingLessonBody;window._editingLessonBody=null;}
+},100);
         }
         document.getElementById('lessonFields').innerHTML=fields;
       },
@@ -614,3 +647,6 @@ filterProgress:function(){
     checkSession();
   })();
   </script>
+  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+</body>
+</html>
