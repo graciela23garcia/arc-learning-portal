@@ -290,45 +290,62 @@ setTimeout(function(){
     }
   
     async function manageCourse(courseId){
-      var course=courses.find(function(c){return c.id===courseId});
-      if(!course)return;
-      var mr=await db.from('modules').select('*').eq('course_id',courseId).order('sort_order');
-      var modules=mr.data||[];
-      var lr=await db.from('lessons').select('*').in('module_id',modules.map(function(m){return m.id})).order('sort_order');
-      var lessons=lr.data||[];
-      var qr=await db.from('quizzes').select('*').in('module_id',modules.map(function(m){return m.id}));
-      var quizzes=qr.data||[];
-      var html='<h2>'+esc(course.title)+'</h2>';
-      html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><span class="section-label" style="margin:0">Modules</span><button class="btn btn-primary btn-sm" onclick="APP.addModule(\''+courseId+'\')">+ Add module</button></div>';
-      if(!modules.length){
-        html+='<div class="empty">No modules yet. Add one to start building your course.</div>';
-      } else {
-        modules.forEach(function(m){
-          var mLessons=lessons.filter(function(l){return l.module_id===m.id});
-          var mQuiz=quizzes.find(function(q){return q.module_id===m.id});
-          html+='<div class="list-item" style="flex-direction:column;align-items:stretch">';
-          html+='<div style="display:flex;justify-content:space-between;align-items:center"><div class="list-item-info"><h3>'+esc(m.title)+'</h3><p>'+mLessons.length+' lesson'+(mLessons.length!==1?'s':'')+''+(mQuiz?' + quiz':'')+'</p></div>';
-          html+='<div class="btn-group"><button class="btn btn-outline btn-sm" onclick="APP.addLesson(\''+m.id+'\',\''+courseId+'\')">+ Lesson</button>';
-          if(!mQuiz) html+='<button class="btn btn-outline btn-sm" onclick="APP.addQuiz(\''+m.id+'\',\''+courseId+'\')">+ Quiz</button>';
-          html+='<button class="btn btn-danger btn-sm" onclick="APP.deleteModule(\''+m.id+'\',\''+courseId+'\')">Delete</button></div></div>';
-          if(mLessons.length||mQuiz){
-            html+='<div class="sub-list">';
-            mLessons.forEach(function(l){
-              html+='<div class="list-item"><div class="list-item-info"><h3>'+esc(l.title)+'</h3><p>'+l.content_type+'</p></div>';
-              html+='<div class="btn-group"><button class="btn btn-outline btn-sm" onclick="APP.editLesson(\''+l.id+'\',\''+courseId+'\')">Edit</button><button class="btn btn-danger btn-sm" onclick="APP.deleteLesson(\''+l.id+'\',\''+courseId+'\')">Delete</button></div></div>';
-            });
-            if(mQuiz){
-              html+='<div class="list-item"><div class="list-item-info"><h3>'+esc(mQuiz.title)+'</h3><p>Passing: '+mQuiz.passing_score+'%</p></div>';
-              html+='<div class="btn-group"><button class="btn btn-outline btn-sm" onclick="APP.manageQuiz(\''+mQuiz.id+'\',\''+courseId+'\')">Questions</button><button class="btn btn-danger btn-sm" onclick="APP.deleteQuiz(\''+mQuiz.id+'\',\''+courseId+'\')">Delete</button></div></div>';
-            }
-            html+='</div>';
+    var course=courses.find(function(c){return c.id===courseId});
+    if(!course)return;
+    var mr=await db.from('modules').select('*').eq('course_id',courseId).order('sort_order');
+    var modules=mr.data||[];
+    var lr=await db.from('lessons').select('*').in('module_id',modules.map(function(m){return m.id})).order('sort_order');
+    var lessons=lr.data||[];
+    var qr=await db.from('quizzes').select('*').in('module_id',modules.map(function(m){return m.id}));
+    var quizzes=qr.data||[];
+    var html='<h2>'+esc(course.title)+'</h2>';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><span class="section-label" style="margin:0">Modules</span><button class="btn btn-primary btn-sm" onclick="APP.addModule(\''+courseId+'\')">+ Add module</button></div>';
+    if(!modules.length){
+      html+='<div class="empty">No modules yet. Add one to start building your course.</div>';
+    } else {
+      modules.forEach(function(m){
+        var mLessons=lessons.filter(function(l){return l.module_id===m.id});
+        var mQuiz=quizzes.find(function(q){return q.module_id===m.id});
+        html+='<div class="list-item" style="flex-direction:column;align-items:stretch">';
+        html+='<div style="display:flex;justify-content:space-between;align-items:center"><div class="list-item-info"><h3>'+esc(m.title)+'</h3><p>'+mLessons.length+' lesson'+(mLessons.length!==1?'s':'')+''+(mQuiz?' + quiz':'')+'</p></div>';
+        html+='<div class="btn-group"><button class="btn btn-outline btn-sm" onclick="APP.addLesson(\''+m.id+'\',\''+courseId+'\')">+ Lesson</button>';
+        if(!mQuiz) html+='<button class="btn btn-outline btn-sm" onclick="APP.addQuiz(\''+m.id+'\',\''+courseId+'\')">+ Quiz</button>';
+        html+='<button class="btn btn-danger btn-sm" onclick="APP.deleteModule(\''+m.id+'\',\''+courseId+'\')">Delete</button></div></div>';
+        if(mLessons.length||mQuiz){
+          html+='<div class="sub-list">';
+          mLessons.forEach(function(l){
+            html+='<div class="list-item" data-id="'+l.id+'"><div class="list-item-info"><h3>☰ '+esc(l.title)+'</h3><p>'+l.content_type+'</p></div>';
+            html+='<div class="btn-group"><button class="btn btn-outline btn-sm" onclick="APP.editLesson(\''+l.id+'\',\''+courseId+'\')">Edit</button><button class="btn btn-danger btn-sm" onclick="APP.deleteLesson(\''+l.id+'\',\''+courseId+'\')">Delete</button></div></div>';
+          });
+          if(mQuiz){
+            html+='<div class="list-item"><div class="list-item-info"><h3>'+esc(mQuiz.title)+'</h3><p>Passing: '+mQuiz.passing_score+'%</p></div>';
+            html+='<div class="btn-group"><button class="btn btn-outline btn-sm" onclick="APP.manageQuiz(\''+mQuiz.id+'\',\''+courseId+'\')">Questions</button><button class="btn btn-danger btn-sm" onclick="APP.deleteQuiz(\''+mQuiz.id+'\',\''+courseId+'\')">Delete</button></div></div>';
           }
           html+='</div>';
-        });
-      }
-      html+='<div class="modal-actions"><button class="btn btn-outline" onclick="APP.closeModal()">Close</button></div>';
-      showModal(html);
+        }
+        html+='</div>';
+      });
     }
+    html+='<div class="modal-actions"><button class="btn btn-outline" onclick="APP.closeModal()">Close</button></div>';
+    showModal(html);
+    setTimeout(function(){
+      var subLists=document.querySelectorAll('.sub-list');
+      subLists.forEach(function(list){
+        new Sortable(list,{
+          animation:150,
+          handle:'.list-item',
+          filter:'.btn-group',
+          onEnd:async function(evt){
+            var items=list.querySelectorAll('.list-item[data-id]');
+            for(var i=0;i<items.length;i++){
+              await db.from('lessons').update({sort_order:i}).eq('id',items[i].getAttribute('data-id'));
+            }
+            toast('Order saved!');
+          }
+        });
+      });
+    },100);
+  }
   
     async function addModule(courseId){
       showModal('<h2>New module</h2><div class="form-row"><label>Module title</label><input id="mModTitle" placeholder="e.g. Budgeting Basics"></div><div class="form-row"><label>Description (optional)</label><textarea id="mModDesc" placeholder="Brief overview..."></textarea></div><div class="modal-actions"><button class="btn btn-outline" onclick="APP.manageCourse(\''+courseId+'\')">Back</button><button class="btn btn-primary" onclick="APP.saveModule(\''+courseId+'\')">Create</button></div>');
@@ -352,6 +369,7 @@ setTimeout(function(){
     async function addLesson(moduleId,courseId){
       showModal('<h2>New lesson</h2>\
   <div class="form-row"><label>Lesson title</label><input id="mLTitle" placeholder="e.g. Drug and Alcohol Training"></div>\
+  <div class="form-row"><label>Order # (1, 2, 3...)</label><input id="mLOrder" type="number" placeholder="1" min="1"></div>\
   <div class="form-row"><label>Content type</label><select id="mLType" onchange="APP.updateLessonFields()"><option value="text">Text</option><option value="video">Video</option><option value="pdf">PDF</option><option value="link">External link</option></select></div>\
   <div id="lessonFields">\
 <div class="form-row"><label>Content</label><div id="quillEditor" style="height:200px;background:white;border-radius:8px;"></div><input type="hidden" id="mLBody"></div>\
@@ -369,7 +387,9 @@ setTimeout(function(){
       var body=window._quill?window._quill.root.innerHTML:'';
       var desc=document.querySelector('#mLDesc')?document.querySelector('#mLDesc').value.trim():'';
       if(!title){toast('Please enter a title','error');return}
-      var row={module_id:moduleId,title:title,content_type:ctype,content_body:null};
+      var existingLessons=await db.from('lessons').select('id').eq('module_id',moduleId);
+      var order=(existingLessons.data||[]).length;
+      var row={module_id:moduleId,title:title,content_type:ctype,content_body:null,sort_order:order};
       if(ctype==='text'){row.content_body=body;}
       else if(ctype==='video'){row.video_url=body;row.content_body=desc||null;}
       else if(ctype==='pdf'){row.pdf_url=body;row.content_body=desc||null;}
@@ -648,5 +668,6 @@ filterProgress:function(){
   })();
   </script>
   <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </body>
 </html>
