@@ -61,6 +61,7 @@
     .course-meta { font-size: 12px; color: var(--text-muted); }
     .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
     .badge-enrolled { background: var(--accent-light); color: var(--accent); }
+    .badge-completed { background: #D1FAE5; color: #065F46; }
     .badge-new { background: #FEF3C7; color: #92400E; }
     .lesson-header { margin-bottom: 24px; }
     .lesson-breadcrumb { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
@@ -233,8 +234,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   }
 
   async function loadEnrollments() {
-    var r = await db.from('enrollments').select('course_id').eq('user_id', currentUser.id);
+    var r = await db.from('enrollments').select('course_id,completed_at').eq('user_id', currentUser.id);
     enrolledCourses = (r.data || []).map(function(e) { return e.course_id; });
+    window._completedCourses = (r.data || []).filter(function(e){ return e.completed_at; }).map(function(e){ return e.course_id; });
   }
 
   async function showCourseBrowser() {
@@ -245,22 +247,20 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     document.getElementById('sidebar').style.display = 'none';
     document.getElementById('backBtn').style.display = 'none';
     document.getElementById('courseGrid').innerHTML = '<div class="loading">Loading courses...</div>';
-
     var r = await db.from('courses').select('*').eq('is_published', true).order('sort_order');
     var courses = r.data || [];
-
     if (!courses.length) {
       document.getElementById('courseGrid').innerHTML = '<div class="empty">No courses available yet.</div>';
       return;
     }
-
     var html = '';
     courses.forEach(function(c) {
       var enrolled = enrolledCourses.includes(c.id);
-      html += '<div class="course-card" onclick="openCourse(\'' + c.id + '\')">';
-      html += '<div class="course-card-body"><h3>' + esc(c.title) + '</h3><p>' + esc(c.description || 'No description provided.') + '</p></div>';
-      html += '<div class="course-card-footer"><span class="course-meta">Click to ' + (enrolled ? 'continue' : 'enroll') + '</span>';
-      html += '<span class="badge ' + (enrolled ? 'badge-enrolled' : 'badge-new') + '">' + (enrolled ? 'Enrolled' : 'New') + '</span></div></div>';
+var completed = window._completedCourses && window._completedCourses.includes(c.id);
+html += '<div class="course-card" onclick="openCourse(\'' + c.id + '\')">';
+html += '<div class="course-card-body"><h3>' + esc(c.title) + '</h3><p>' + esc(c.description || 'No description provided.') + '</p></div>';
+html += '<div class="course-card-footer"><span class="course-meta">Click to ' + (completed ? 'review' : enrolled ? 'continue' : 'enroll') + '</span>';
+html += '<span class="badge ' + (completed ? 'badge-completed' : enrolled ? 'badge-enrolled' : 'badge-new') + '">' + (completed ? '✓ Completed' : enrolled ? 'Enrolled' : 'New') + '</span></div></div>';
     });
     document.getElementById('courseGrid').innerHTML = html;
   }
@@ -397,9 +397,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   window.submitQuiz = async function(quizId, passingScore) {
     var qqr = await db.from('quiz_questions').select('*').eq('quiz_id', quizId);
     var questions = qqr.data || [];
-    console.log('Quiz ID:', quizId);
-    console.log('Questions found:', questions.length);
-    console.log('Questions:', JSON.stringify(questions));
     var correct = 0; var answered = true;
     questions.forEach(function(q) {
       var selected = document.querySelector('input[name="q_' + q.id + '"]:checked');
@@ -419,14 +416,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     var passed = score >= passingScore;
     await db.from('quiz_attempts').insert({ user_id: currentUser.id, quiz_id: quizId, score: score, passed: passed });
     document.getElementById('quizResult').innerHTML = '<div class="quiz-result ' + (passed ? 'passed' : 'failed') + '">' + (passed ? '🎉 You passed! Score: ' + score + '%' : '❌ Score: ' + score + '%. Need ' + passingScore + '% to pass.') + '</div>' + (!passed ? '<button class="btn btn-outline" style="margin-top:12px" onclick="loadQuiz(currentLesson)">Retake Quiz</button>' : '');
-    document.querySelector('.quiz-section .btn-primary').style.display = 'none';
+    var submitBtn = document.querySelector('.quiz-section .btn-primary');
+    if (submitBtn) submitBtn.style.display = 'none';
     if (passed) checkCourseCompletion();
   };
 
   async function checkCourseCompletion() {
     if (!allLessons.every(function(l) { return completedLessons.includes(l.id); })) return;
-    
-    // Check if any module has a quiz
     var hasQuiz = false;
     var allQuizzesPassed = true;
     for (var i = 0; i < allModules.length; i++) {
@@ -437,11 +433,23 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         if (!ar.data) { allQuizzesPassed = false; break; }
       }
     }
-
     if (hasQuiz && !allQuizzesPassed) return;
-
-    document.getElementById('completionBanner').innerHTML = '<div class="completion-banner"><div class="trophy">🏆</div><h3>Course Complete!</h3><p>Congratulations! You have completed ' + esc(currentCourse.title) + '.</p><span class="completion-badge">🎓 Certificate of Completion</span></div>';
-    db.from('enrollments').update({ completed_at: new Date().toISOString() }).eq('user_id', currentUser.id).eq('course_id', currentCourse.id);
+    var completionDate = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+    var studentName = currentUser.user_metadata?.full_name || currentUser.email;
+    document.getElementById('completionBanner').innerHTML =
+      '<div class="completion-banner">' +
+      '<div class="trophy">🏆</div>' +
+      '<h3>Course Complete!</h3>' +
+      '<p>Congratulations! You have completed ' + esc(currentCourse.title) + '.</p>' +
+      '<button class="completion-badge" onclick="APP.showCertificate()" style="cursor:pointer;border:none;margin-top:16px;">🎓 View Certificate</button>' +
+      '</div>';
+      var upd = await db.from('enrollments').update({ completed_at: new Date().toISOString() }).eq('user_id', currentUser.id).eq('course_id', currentCourse.id);
+      console.log('Enrollment update result:', upd);
+    window._certificateData = {
+      studentName: studentName,
+      courseName: currentCourse.title,
+      completionDate: completionDate
+    };
   }
 
   function getYouTubeEmbed(url) {
@@ -453,6 +461,65 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     if (!s) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+
+  window.APP = {
+    showCertificate: function() {
+      var d = window._certificateData;
+      if (!d) return;
+      var win = window.open('', '_blank');
+      win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Certificate of Completion</title>
+          <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+          <style>
+             * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: #f0f0f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 40px; }
+  .cert { width: 1100px; min-height: 620px; border: 8px solid #E8873A; border-radius: 4px; padding: 60px 80px; text-align: center; position: relative; background: #fff; display: flex; flex-direction: column; justify-content: center; }
+  .cert::before { content: ''; position: absolute; inset: 14px; border: 2px solid #E8873A; border-radius: 2px; opacity: 0.4; pointer-events: none; }
+  .logo { height: 70px; object-fit: contain; margin-bottom: 24px; }
+  .cert-title { font-family: 'Fraunces', serif; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; color: #E8873A; margin-bottom: 16px; }
+  .cert-heading { font-family: 'Fraunces', serif; font-size: 42px; font-weight: 700; color: #1A1A18; margin-bottom: 32px; }
+  .cert-body { font-size: 16px; color: #6B6B65; margin-bottom: 12px; }
+  .cert-name { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 700; color: #E8873A; margin: 20px 0; border-bottom: 2px solid #E8E8E3; padding-bottom: 20px; }
+  .cert-course { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 600; color: #1A1A18; margin: 16px 0; }
+  .cert-date { font-size: 14px; color: #6B6B65; margin-top: 32px; }
+  .cert-footer { margin-top: 48px; display: flex; justify-content: center; gap: 60px; }
+  .cert-sig { text-align: center; }
+  .cert-sig-line { width: 160px; border-top: 1px solid #1A1A18; margin: 0 auto 8px; }
+  .cert-sig-name { font-size: 13px; font-weight: 500; }
+  .cert-sig-title { font-size: 11px; color: #6B6B65; }
+  .print-btn { margin-top: 32px; padding: 12px 28px; background: #E8873A; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  @page { size: landscape; margin: 0.5in; }
+  @media print { .print-btn { display: none; } body { background: #fff; padding: 0; margin: 0; } .cert { width: 100%; min-height: auto; border-radius: 0; border-width: 6px; } }
+          </style>
+        </head>
+        <body>
+          <div class="cert">
+            <img class="logo" src="https://images.squarespace-cdn.com/content/v1/5e78c49d1e238d030f3f1e8d/63207967-5ca7-49fa-ac96-ce423915ccbb/Arc_TriCities_Color_Rev_PNG.png">
+            <div class="cert-title">Certificate of Completion</div>
+            <div class="cert-heading">This certifies that</div>
+            <div class="cert-name">${d.studentName}</div>
+            <div class="cert-body">has successfully completed the course</div>
+            <div class="cert-course">${d.courseName}</div>
+            <div class="cert-date">Completed on ${d.completionDate}</div>
+            <div class="cert-footer">
+              <div class="cert-sig">
+                <div class="cert-sig-line"></div>
+                <div class="cert-sig-name">Arc of Tri-Cities</div>
+                <div class="cert-sig-title">Authorized Signature</div>
+              </div>
+            </div>
+            <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+          </div>
+        </body>
+        </html>
+      `);
+      win.document.close();
+    }
+  };
 
   init();
 })();
