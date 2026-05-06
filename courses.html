@@ -435,17 +435,38 @@ if (!bodyHtml) bodyHtml = '<div class="text-content"><p>No content yet.</p></div
 
   async function checkCourseCompletion() {
     if (!allLessons.every(function(l) { return completedLessons.includes(l.id); })) return;
-    var hasQuiz = false;
-    var allQuizzesPassed = true;
-    for (var i = 0; i < allModules.length; i++) {
-      var qr = await db.from('quizzes').select('id').eq('module_id', allModules[i].id).maybeSingle();
-      if (qr.data) {
-        hasQuiz = true;
-        var ar = await db.from('quiz_attempts').select('id').eq('user_id', currentUser.id).eq('quiz_id', qr.data.id).eq('passed', true).maybeSingle();
-        if (!ar.data) { allQuizzesPassed = false; break; }
-      }
+
+    // Get all quizzes for this course
+    var moduleIds = allModules.map(function(m) { return m.id; });
+    var qr = await db.from('quizzes').select('*').in('module_id', moduleIds).order('sort_order');
+    var allQuizzes = qr.data || [];
+
+    // Build combined list of all items sorted by module and sort_order
+    var allItems = [];
+    allModules.forEach(function(m) {
+      var moduleLessons = allLessons.filter(function(l) { return l.module_id === m.id; });
+      var moduleQuizzes = allQuizzes.filter(function(q) { return q.module_id === m.id; });
+      var combined = [];
+      moduleLessons.forEach(function(l) { combined.push({type:'lesson', id:l.id, sort_order:l.sort_order||0}); });
+      moduleQuizzes.forEach(function(q) { combined.push({type:'quiz', id:q.id, sort_order:q.sort_order||0}); });
+      combined.sort(function(a,b) { return a.sort_order - b.sort_order; });
+      allItems = allItems.concat(combined);
+    });
+
+    if (!allItems.length) return;
+
+    // Get the last item
+    var lastItem = allItems[allItems.length - 1];
+
+    // Check if last item is completed
+    if (lastItem.type === 'lesson') {
+      if (!completedLessons.includes(lastItem.id)) return;
+    } else if (lastItem.type === 'quiz') {
+      var ar = await db.from('quiz_attempts').select('id').eq('user_id', currentUser.id).eq('quiz_id', lastItem.id).eq('passed', true).maybeSingle();
+      if (!ar.data) return;
     }
-    if (hasQuiz && !allQuizzesPassed) return;
+
+    // All done!
     var completionDate = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
     var studentName = currentUser.user_metadata?.full_name || currentUser.email;
     document.getElementById('completionBanner').innerHTML =
@@ -455,15 +476,13 @@ if (!bodyHtml) bodyHtml = '<div class="text-content"><p>No content yet.</p></div
       '<p>Congratulations! You have completed ' + esc(currentCourse.title) + '.</p>' +
       '<button class="completion-badge" onclick="APP.showCertificate()" style="cursor:pointer;border:none;margin-top:16px;">🎓 View Certificate</button>' +
       '</div>';
-      var upd = await db.from('enrollments').update({ completed_at: new Date().toISOString() }).eq('user_id', currentUser.id).eq('course_id', currentCourse.id);
-      console.log('Enrollment update result:', upd);
+    db.from('enrollments').update({ completed_at: new Date().toISOString() }).eq('user_id', currentUser.id).eq('course_id', currentCourse.id);
     window._certificateData = {
       studentName: studentName,
       courseName: currentCourse.title,
       completionDate: completionDate
     };
   }
-
   function getYouTubeEmbed(url) {
     var match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
     return match ? 'https://www.youtube.com/embed/' + match[1] : null;

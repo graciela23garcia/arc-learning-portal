@@ -305,22 +305,22 @@ setTimeout(function(){
     } else {
       modules.forEach(function(m){
         var mLessons=lessons.filter(function(l){return l.module_id===m.id});
-        var mQuiz=quizzes.find(function(q){return q.module_id===m.id});
+        var mQuizzes=quizzes.filter(function(q){return q.module_id===m.id});
         html+='<div class="list-item" style="flex-direction:column;align-items:stretch">';
-        html+='<div style="display:flex;justify-content:space-between;align-items:center"><div class="list-item-info"><h3>'+esc(m.title)+'</h3><p>'+mLessons.length+' lesson'+(mLessons.length!==1?'s':'')+''+(mQuiz?' + quiz':'')+'</p></div>';
+          html+='<div style="display:flex;justify-content:space-between;align-items:center"><div class="list-item-info"><h3>'+esc(m.title)+'</h3><p>'+mLessons.length+' lesson'+(mLessons.length!==1?'s':'')+(mQuizzes.length?' + '+mQuizzes.length+' quiz'+(mQuizzes.length!==1?'zes':''):'')+'</p></div>';
         html+='<div class="btn-group"><button class="btn btn-outline btn-sm" onclick="APP.addLesson(\''+m.id+'\',\''+courseId+'\')">+ Lesson</button>';
-        if(!mQuiz) html+='<button class="btn btn-outline btn-sm" onclick="APP.addQuiz(\''+m.id+'\',\''+courseId+'\')">+ Quiz</button>';
+          html+='<button class="btn btn-outline btn-sm" onclick="APP.addQuiz(\''+m.id+'\',\''+courseId+'\')">+ Quiz</button>';
         html+='<button class="btn btn-danger btn-sm" onclick="APP.deleteModule(\''+m.id+'\',\''+courseId+'\')">Delete</button></div></div>';
-        if(mLessons.length||mQuiz){
+        if(mLessons.length||mQuizzes.length){
           html+='<div class="sub-list">';
           mLessons.forEach(function(l){
             html+='<div class="list-item" data-id="'+l.id+'"><div class="list-item-info"><h3>☰ '+esc(l.title)+'</h3><p>'+l.content_type+'</p></div>';
             html+='<div class="btn-group"><button class="btn btn-outline btn-sm" onclick="APP.editLesson(\''+l.id+'\',\''+courseId+'\')">Edit</button><button class="btn btn-danger btn-sm" onclick="APP.deleteLesson(\''+l.id+'\',\''+courseId+'\')">Delete</button></div></div>';
           });
-          if(mQuiz){
-            html+='<div class="list-item"><div class="list-item-info"><h3>'+esc(mQuiz.title)+'</h3><p>Passing: '+mQuiz.passing_score+'%</p></div>';
+          mQuizzes.forEach(function(mQuiz){
+            html+='<div class="list-item" data-id="'+mQuiz.id+'" data-type="quiz"><div class="list-item-info"><h3>☰ 📝 '+esc(mQuiz.title)+'</h3><p>Passing: '+mQuiz.passing_score+'%</p></div>';
             html+='<div class="btn-group"><button class="btn btn-outline btn-sm" onclick="APP.manageQuiz(\''+mQuiz.id+'\',\''+courseId+'\')">Questions</button><button class="btn btn-danger btn-sm" onclick="APP.deleteQuiz(\''+mQuiz.id+'\',\''+courseId+'\')">Delete</button></div></div>';
-          }
+          });
           html+='</div>';
         }
         html+='</div>';
@@ -338,7 +338,13 @@ setTimeout(function(){
           onEnd:async function(evt){
             var items=list.querySelectorAll('.list-item[data-id]');
             for(var i=0;i<items.length;i++){
-              await db.from('lessons').update({sort_order:i}).eq('id',items[i].getAttribute('data-id'));
+              var itemId=items[i].getAttribute('data-id');
+              var itemType=items[i].getAttribute('data-type');
+              if(itemType==='quiz'){
+                await db.from('quizzes').update({sort_order:i}).eq('id',itemId);
+              } else {
+                await db.from('lessons').update({sort_order:i}).eq('id',itemId);
+              }
             }
             toast('Order saved!');
           }
@@ -453,12 +459,15 @@ setTimeout(function(){
     }
   
     async function saveQuiz(moduleId,courseId){
-      var title=document.querySelector('#mQTitle').value.trim()||'Module quiz';
-      var score=parseInt(document.querySelector('#mQScore').value)||70;
-      var r=await db.from('quizzes').insert({module_id:moduleId,title:title,passing_score:score}).select();
-      if(r.error){toast(r.error.message,'error');return}
-      toast('Quiz created!');manageCourse(courseId);
-    }
+    var title=document.querySelector('#mQTitle').value.trim()||'Module quiz';
+    var score=parseInt(document.querySelector('#mQScore').value)||70;
+    var existingLessons=await db.from('lessons').select('id').eq('module_id',moduleId);
+    var existingQuizzes=await db.from('quizzes').select('id').eq('module_id',moduleId);
+    var order=(existingLessons.data||[]).length+(existingQuizzes.data||[]).length;
+    var r=await db.from('quizzes').insert({module_id:moduleId,title:title,passing_score:score,sort_order:order}).select();
+    if(r.error){toast(r.error.message,'error');return}
+    toast('Quiz created!');manageCourse(courseId);
+  }
   
     async function deleteQuiz(id,courseId){
       if(!confirm('Delete this quiz and all its questions?'))return;
